@@ -1,1 +1,18 @@
-下载twitter用户的图片和视频
+下载twitter用户的图片和视频,不需要申请推特开发者相关的认证的
+#貌似最多只能拿到800多条推特
+#可能需要不定时更换header的参数，直接从浏览器里复制即可
+headers={
+    "authorization":"xxx",
+    "cookie":"xxx",
+    "user-agent":"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
+    "x-csrf-token":"xxx",
+    "x-guest-token":"xxx",
+    }
+
+from twitterdl import  TwitterDownload
+
+if __name__ == '__main__':
+    td=TwitterDownload()
+    td.download_oneuser('NBA')#下载nba的图片和视频
+    # td.download_followed('NBA')#下载NBA关注的用户的图片和视频
+    # td.download_member_list('NBA')#下载NBA的列表中的用户中的视频

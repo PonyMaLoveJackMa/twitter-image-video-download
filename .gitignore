@@ -126,4 +126,6 @@ dmypy.json
 .idea/
 tweepy_api.py
 header_config.py
+temp*
+entry.py
 
