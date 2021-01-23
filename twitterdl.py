@@ -7,15 +7,10 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 
 import requests
+from zhconv import convert
 
 from header_config import login_header
-from langconv import *
 from utils import count_time
-
-proxies = {
-    'http': 'http://127.0.0.1:10800',
-    'https': 'https://127.0.0.1:10800',
-}
 
 
 class TwitterDownload():
@@ -30,6 +25,11 @@ class TwitterDownload():
     member_save_path = r'E:\爬虫\twitter_members'
     headers = login_header
     repeat_pattern = '_\d{18,20}.*'
+    convert_type = 'zh-cn'
+    proxies = {
+        'http': 'http://127.0.0.1:10800',
+        'https': 'https://127.0.0.1:10800',
+    }
 
     # copy from chrome
     tweets_params = {
@@ -67,7 +67,7 @@ class TwitterDownload():
         for i in range(1, 5):
             try:
                 url = self.base_url.format(user_id)
-                res = requests.get(url=url, proxies=proxies, headers=self.headers, params=self.tweets_params,
+                res = requests.get(url=url, proxies=self.proxies, headers=self.headers, params=self.tweets_params,
                                    timeout=i * 30)
                 if res.status_code != 200:
                     print(res.json())
@@ -86,7 +86,7 @@ class TwitterDownload():
         for i in range(1, 5):
             try:
                 response = requests.get(self.user_id_api.format(user_name),
-                                        proxies=proxies, timeout=i * 30,
+                                        proxies=self.proxies, timeout=i * 30,
                                         headers=login_header).json()
                 user_id = response['data']['user']['rest_id']
             except Exception as e:
@@ -124,12 +124,13 @@ class TwitterDownload():
             return
         for i in range(5):
             try:
-                content = requests.get(download_url, timeout=(i + 1) * 60, proxies=proxies).content
+                content = requests.get(download_url, timeout=(i + 1) * 60, proxies=self.proxies).content
                 file_path = os.path.join(save_dir, legal_file_name)
                 with open(file_path, 'wb') as f:
                     f.write(content)
             except Exception:
-                print("save_file fail:%s\ntraceback:%s" % (download_url, traceback.format_exc()))
+                print('save_file失败第{}次,url:{}'.format(i + 1, download_url))
+                # print("save_file fail:%s\ntraceback:%s" % (download_url, traceback.format_exc()))
             else:
                 print(file_path)
                 return
@@ -165,9 +166,8 @@ class TwitterDownload():
         full_text = tweet['full_text']
         full_text = full_text.split('http')[0]
         full_text = re.sub('#\w+', '', full_text)
-        # full_text = re.sub('@\w+', '', full_text)
         full_text = re.sub(r"[^\w@]", "", full_text)
-        full_text = Converter('zh-hans').convert(full_text)
+        full_text = convert(full_text, self.convert_type)
         legal_file_name = full_text.strip()[:150]
         return legal_file_name or id_str
 
@@ -231,12 +231,12 @@ class TwitterDownload():
         user_id = self.get_user_id(user_name)
         try:
             response = requests.get(url=self.member_list_id_api.format(user_id),
-                                    proxies=proxies,
+                                    proxies=self.proxies,
                                     headers=self.headers,
                                     timeout=60).json()
             member_list_id = response['lists'][0]['id_str']
             res = requests.get(url=self.member_list_url.format(member_list_id),
-                               proxies=proxies,
+                               proxies=self.proxies,
                                headers=self.headers,
                                timeout=60).json()
             members = res['users']
@@ -261,7 +261,8 @@ class TwitterDownload():
         while True:
             try:
                 variables_str = json.dumps(variables)
-                res = requests.get(url=self.followed_api.format(variables_str), proxies=proxies, headers=login_header,
+                res = requests.get(url=self.followed_api.format(variables_str), proxies=self.proxies,
+                                   headers=login_header,
                                    timeout=60).json()
                 all_user_entries = res['data']['user']['following_timeline']['timeline']['instructions'][-1]['entries']
             except Exception:
@@ -284,7 +285,7 @@ class TwitterDownload():
             urls = [self.main_user_name_api, self.backup_user_name_api]
             for url in urls:
                 url = url.format(screen_name)
-                res = requests.get(url, proxies=proxies, timeout=60, headers=self.headers).json()
+                res = requests.get(url, proxies=self.proxies, timeout=60, headers=self.headers).json()
                 if res.get('data'):
                     username = res['data']['user']['legacy']['name']
                     break
@@ -293,11 +294,8 @@ class TwitterDownload():
         except Exception:
             print("get_user_name fail:%s\ntraceback:%s" % (screen_name, traceback.format_exc()))
             username = screen_name
-        # legal_user_name = re.sub(r"[\/\\\:\*\?\"\<\>\|!！\.\s]", "", username)
         legal_user_name = re.sub(r"[^\w]", "", username)
-        legal_user_name = Converter('zh-hans').convert(legal_user_name)
-        if not legal_user_name:
-            legal_user_name = screen_name
+        legal_user_name = convert(legal_user_name, self.convert_type) or screen_name
         return legal_user_name
 
     @count_time
