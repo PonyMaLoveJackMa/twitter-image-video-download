@@ -58,9 +58,11 @@ class TwitterDownload():
         'ext': 'mediaStats,highlightedLabel',
     }
 
-    def __init__(self, user_name=None, ):
+    def __init__(self, user_name=None, start_position=0, reverse=False):
         self.user_name = user_name
         self.member_screen_name_list = [member.get('screen_name') for member in self.get_member_list(user_name)]
+        self.start_position = start_position
+        self.reverse = reverse
 
     # @count_time
     def get_tweets(self, user_id):
@@ -129,8 +131,9 @@ class TwitterDownload():
                 with open(file_path, 'wb') as f:
                     f.write(content)
             except Exception:
-                print('save_file失败第{}次,url:{}'.format(i + 1, download_url))
-                # print("save_file fail:%s\ntraceback:%s" % (download_url, traceback.format_exc()))
+                # print('save_file失败第{}次,url:{}'.format(i + 1, download_url))
+                if i == 4:
+                    print("save_file fail:%s\ntraceback:%s" % (download_url, traceback.format_exc()))
             else:
                 print(file_path)
                 return
@@ -312,9 +315,8 @@ class TwitterDownload():
         self.download_all_twitter(tweets, screen_name, user_name)
 
     @count_time
-    def download_member_list(self, username=None):
-        username = username or self.user_name
-        members = self.get_member_list(username)
+    def download_member_list(self, user_name):
+        members = self.get_member_list(user_name)
         for member in members:
             screen_name = member.get('screen_name')
             user_name = member.get('name')
@@ -329,10 +331,10 @@ class TwitterDownload():
         os.rename(old_save_dir, new_save_dir)
 
     @count_time
-    def download_followed(self, user_name=None):
-        user_name = user_name or self.user_name
-        all_followed = self.get_all_followed(user_name)
-        # all_followed.reverse()
+    def download_followed(self, user_name):
+        all_followed = self.get_all_followed(user_name)[self.start_position:]
+        if self.reverse:
+            all_followed.reverse()
         # random.shuffle(all_followed)
         for index, follow in enumerate(all_followed):
             try:
