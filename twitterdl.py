@@ -125,6 +125,8 @@ class TwitterDownload():
         target_length = int(requests.head(download_url, timeout=60, proxies=self.proxies).headers.get(
             'Content-Length', 0))
         if os.path.exists(file_path):
+            # print('文件已存在:{}'.format(file_path))
+            # return
             with open(file_path, 'rb') as f:
                 file_lenght = len(f.read())
                 if target_length > file_lenght:
@@ -135,13 +137,17 @@ class TwitterDownload():
         for i in range(5):
             # todo stream
             try:
-                content = requests.get(download_url, timeout=(i + 1) * 60, proxies=self.proxies).content
-                if len(content) < target_length:
-                    print('下载文件不完整:{}-{}'.format(download_url, legal_file_name))
-                    continue
+                res = requests.get(download_url, timeout=(i + 1) * 60, proxies=self.proxies)
+                content = res.content
+                # target_length = int(res.headers.get('Content-Length', 0))
                 file_path = os.path.join(save_dir, legal_file_name)
                 with open(file_path, 'wb') as f:
                     f.write(content)
+                if len(content) < target_length:
+                    print(len(content),target_length)
+                    print('下载文件不完整:{}\n{}'.format(download_url, legal_file_name))
+                    continue
+
             except Exception:
                 # print('save_file失败第{}次,url:{}'.format(i + 1, download_url))
                 if i == 4:
@@ -149,6 +155,7 @@ class TwitterDownload():
             else:
                 print(file_path)
                 return
+        print('下载失败，文件不完整:{}\n{}'.format(download_url, legal_file_name))
 
     def get_save_dir(self, unique_username):
         dir_list = os.listdir(self.save_path)
@@ -219,6 +226,7 @@ class TwitterDownload():
 
     # @count_time
     def download_all_twitter(self, tweets, unique_name, user_name):
+        print('{}-获取推特:{}'.format(user_name, len(tweets)))
         if unique_name in self.member_screen_name_list:
             self.save_path = self.member_save_path
         else:
@@ -364,7 +372,6 @@ class TwitterDownload():
                     continue
                 if followed_screen_name in self.member_screen_name_list:
                     continue
-                print('{}-获取推特:{}'.format(followed_user_name, len(tweets)))
                 self.download_all_twitter(tweets, followed_screen_name, followed_user_name)
                 # self.rename_dir(followed_screen_name, legal_followed_user_name)
             finally:
