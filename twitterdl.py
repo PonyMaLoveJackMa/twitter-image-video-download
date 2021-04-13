@@ -122,11 +122,23 @@ class TwitterDownload():
     def save_file(self, download_url, save_dir, legal_file_name):
         self.rename_repeat_file(save_dir, legal_file_name)
         file_path = os.path.join(save_dir, legal_file_name)
+        target_length = int(requests.head(download_url, timeout=60, proxies=self.proxies).headers.get(
+            'Content-Length', 0))
         if os.path.exists(file_path):
-            return
+            with open(file_path, 'rb') as f:
+                file_lenght = len(f.read())
+                if target_length > file_lenght:
+                    print('发现不完整文件', download_url, legal_file_name, file_lenght, target_length)
+                else:
+                    return
+
         for i in range(5):
+            # todo stream
             try:
                 content = requests.get(download_url, timeout=(i + 1) * 60, proxies=self.proxies).content
+                if len(content) < target_length:
+                    print('下载文件不完整:{}-{}'.format(download_url, legal_file_name))
+                    continue
                 file_path = os.path.join(save_dir, legal_file_name)
                 with open(file_path, 'wb') as f:
                     f.write(content)
@@ -352,6 +364,7 @@ class TwitterDownload():
                     continue
                 if followed_screen_name in self.member_screen_name_list:
                     continue
+                print('{}-获取推特:{}'.format(followed_user_name, len(tweets)))
                 self.download_all_twitter(tweets, followed_screen_name, followed_user_name)
                 # self.rename_dir(followed_screen_name, legal_followed_user_name)
             finally:
